@@ -12,21 +12,20 @@ setGlobalOptions({maxInstances: 10});
 const appExpress = express();
 appExpress.use(cors({origin: "*"}));
 appExpress.options("*", cors());
-appExpress.get("orders/newOrders", getNewOrders);
-appExpress.get("orders/pastOrders", getPastOrders);
-appExpress.get("orders/v2/newOrders", streamData);
+appExpress.get("/orders/newOrders", getNewOrders);
+appExpress.get("/orders/pastOrders", getPastOrders);
+appExpress.get("/orders/v2/newOrders", streamData);
 appExpress.post("/v1/notification", cors({
   "origin": "*",
   "methods": "POST",
   "preflightContinue": false,
   "optionsSuccessStatus": 204,
 }), sendNotification);
-appExpress.patch("orders/:orderId", cors({
+appExpress.patch("/orders/:orderId", cors({
   "origin": "*",
   "methods": "PATCH",
   "preflightContinue": false,
   "optionsSuccessStatus": 204,
-
 }), updateOrder);
 
 export const api = onRequest(

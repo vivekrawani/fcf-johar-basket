@@ -269,14 +269,14 @@ const confirmOrder = async (userId: string, orderId: string, otp: string) => {
     res.message = "Order Delivered";
     const deliverTime = new Date();
     if (orderRef.exists) {
-      userOrderRef.doc("orderDetails").update({
+      await userOrderRef.doc("orderDetails").update({
         isDelivered: true,
         payment: true,
         deliverTime,
       });
     }
     if (gOrderRef.exists) {
-      globalOrderRef.doc("orderDetails").update({
+      await globalOrderRef.doc("orderDetails").update({
         isDelivered: true,
         payment: true,
         deliverTime,
@@ -303,13 +303,13 @@ const confirmOrder = async (userId: string, orderId: string, otp: string) => {
 
 import {OrderAction, generateOTP} from "./utils";
 export const updateOrder = async (req: Request, res: Response) => {
+  res.set("Access-Control-Allow-Origin", "*");
   const body = await req.body;
   const orderId = req.params.orderId;
   const updateType = body.updateType as OrderAction;
   const otp = body.otp as string;
   const date = body.date as string;
   const userId = body.userId as string;
-  res.set("Access-Control-Allow-Origin", "*");
   try {
     if (updateType == OrderAction.ACCEPT_ORDER) {
       const otp = generateOTP(6);
