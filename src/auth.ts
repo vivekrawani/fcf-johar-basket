@@ -10,8 +10,8 @@ const generateJWT =(email :string) =>{
 export const authenticateToken = async (
   req : Request, res : Response, next : any) => {
   if ( req.path == "/auth") return next();
-  const authHeader = req.headers["authorization"];
-  console.log(authHeader);
+  const authHeader = req.headers.authorization;
+  console.log("Auth", authHeader);
   const token = authHeader;
   if (token == null) return res.sendStatus(401);
   const secretKey = process.env.JWT_SECRET as string;
@@ -27,7 +27,7 @@ export const authenticateToken = async (
 export const authorization = async (req : Request, res : Response)=>{
   const query = req.query;
   const email = query["email"] as string;
-  const isAdmin =await verifyAdmin(email);
+  const isAdmin = await verifyAdmin(email);
   let token ="";
   if (isAdmin) {
     token = generateJWT(email);
