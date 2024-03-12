@@ -7,6 +7,23 @@ const generateJWT =(email :string) =>{
   return jwt.sign(email, secretKey);
 };
 
+export const authenticateToken = async (
+  req : Request, res : Response, next : any) => {
+  if ( req.path == "/auth") return next();
+  const authHeader = req.headers["authorization"];
+  console.log(authHeader);
+  const token = authHeader;
+  if (token == null) return res.sendStatus(401);
+  const secretKey = process.env.JWT_SECRET as string;
+  try {
+    const verified = jwt.verify(token, secretKey);
+    console.log(verified);
+    await next();
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export const authorization = async (req : Request, res : Response)=>{
   const query = req.query;
   const email = query["email"] as string;
