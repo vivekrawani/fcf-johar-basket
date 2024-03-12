@@ -4,6 +4,7 @@ import * as express from "express";
 import * as cors from "cors";
 import {updateOrder, getNewOrders, getPastOrders, streamData} from "./database";
 import {sendNotification} from "./notifications";
+import {authorization} from "./auth";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -12,6 +13,7 @@ setGlobalOptions({maxInstances: 10});
 const appExpress = express();
 appExpress.use(cors({origin: "*"}));
 appExpress.options("*", cors());
+appExpress.get("/auth", authorization);
 appExpress.get("/orders/newOrders", getNewOrders);
 appExpress.get("/orders/pastOrders", getPastOrders);
 appExpress.get("/orders/v2/newOrders", streamData);

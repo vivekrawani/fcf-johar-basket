@@ -324,10 +324,20 @@ export const updateOrder = async (req: Request, res: Response) => {
   }
 };
 
+
+export const verifyAdmin = async (userEmail : string)=>{
+  const db = admin.firestore();
+  const adminRef = db.collection("admin").doc("adminEmails");
+  const res = (await adminRef.get()).data();
+  if (res) {
+    const adminEmails = res["list"];
+    const isAdmin = adminEmails.includes(userEmail);
+    return isAdmin;
+  }
+  return false;
+};
+
 export const streamData = async (req : Request, res :Response)=> {
-  console.log("====================================");
-  console.log("Stream");
-  console.log("====================================");
   const db = admin.firestore();
   const newOrders = await db.collection("orders").doc("newOrders")
     .listCollections();
