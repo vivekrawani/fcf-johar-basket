@@ -336,6 +336,13 @@ export const verifyAdmin = async (userEmail : string)=>{
   }
   return false;
 };
+export const deleteOrder = async (req : Request, res : Response) =>{
+  // const db = admin.firestore();
+  // const response =db.collection("orders").doc("newOrders");
+  const id = req.params;
+  console.log(id);
+  res.end();
+};
 
 export const streamData = async (req : Request, res :Response)=> {
   const db = admin.firestore();

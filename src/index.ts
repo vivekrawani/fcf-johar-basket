@@ -2,7 +2,12 @@ import {setGlobalOptions} from "firebase-functions/v2";
 import {onRequest} from "firebase-functions/v2/https";
 import * as express from "express";
 import * as cors from "cors";
-import {updateOrder, getNewOrders, getPastOrders, streamData} from "./database";
+import {updateOrder,
+  getNewOrders,
+  getPastOrders,
+  streamData,
+  deleteOrder,
+} from "./database";
 import {sendNotification} from "./notifications";
 import {authorization, authenticateToken} from "./auth";
 
@@ -29,6 +34,12 @@ appExpress.patch("/orders/:orderId", cors({
   "preflightContinue": false,
   "optionsSuccessStatus": 204,
 }), authenticateToken, updateOrder);
+appExpress.delete("/orders/:id", cors({
+  "origin": "*",
+  "methods": "DELETE",
+  "preflightContinue": false,
+  "optionsSuccessStatus": 204,
+}), authenticateToken, deleteOrder);
 
 export const api = onRequest(
   {cors: true, region: ["asia-east1"]},
