@@ -50,3 +50,24 @@ export const sendNotification = async (
   admin.messaging().sendEachForMulticast(message);
   response.end();
 };
+
+export const sendNotificationToAdmin = async (
+  title : string,
+  body:string
+)=>{
+  const db = admin.firestore();
+  const userRef = db.collection("admin");
+  const users = await userRef.get();
+  const tokens = users.docs.map((doc)=>{
+    const fcm = doc.data()["fcm"];
+    return fcm;
+  });
+  const message = {
+    notification: {
+      title,
+      body,
+    },
+    tokens: tokens,
+  };
+  admin.messaging().sendEachForMulticast(message);
+};

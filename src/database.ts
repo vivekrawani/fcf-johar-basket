@@ -4,9 +4,10 @@ admin.initializeApp();
 import {Request, Response} from "express";
 import type {OrderDetails} from "./types";
 import {Readable} from "stream";
-export const getNewOrders = async (request: Request, response: Response) => {
+type OrderType = "newOrders" | "pastOrders";
+export const getOrdersFromDb = async (orderType : OrderType) => {
   const db = admin.firestore();
-  const newOrdersRef = db.collection("orders").doc("newOrders");
+  const newOrdersRef = db.collection("orders").doc(orderType);
   const orders: OrderDetails[] = [];
   const snap = await newOrdersRef.listCollections();
   for (let i = 0; i < snap.length; i++) {
@@ -48,63 +49,13 @@ export const getNewOrders = async (request: Request, response: Response) => {
       orderAcceptTime,
       deliverTime,
     };
-
     orders.push(Order);
   }
-  response.send(orders);
+  return orders;
 };
 
-export const getPastOrders = async (request: Request, response: Response) => {
-  const db = admin.firestore();
-  const newOrdersRef = db.collection("orders").doc("pastOrders");
-  const orders: OrderDetails[] = [];
-  const snap = await newOrdersRef.listCollections();
-  for (let i = 0; i < snap.length; i++) {
-    const element = snap[i];
-    const subRef = newOrdersRef.collection(element.id);
-    const subCollections = await subRef.listDocuments();
-    const orderId = element.id;
-    const len = subCollections.length;
-    const ref = await subCollections[len - 1].get();
-    const data = (await subRef.doc(ref.id).get()).data();
-    const userName = data?.userName;
-    const mobileNumber = data?.mobileNumber;
-    const address = data?.address;
-    const pincode = data?.pincode;
-    const amount = data?.amount;
-    const isAccepted = data?.isAccepted;
-    const isDelivered = data?.isDelivered;
-    const payment = data?.payment;
-    const gst = data?.gst;
-    const time = data?.time;
-    const orderTime = data?.orderTime.toDate();
-    const userId = data?.userId;
-    const orderAcceptTime = data?.orderAcceptTime?.toDate();
-    const deliverTime = data?.deliverTime?.toDate();
-    const Order: OrderDetails = {
-      userName,
-      mobileNumber,
-      address,
-      pincode,
-      amount,
-      isAccepted,
-      isDelivered,
-      payment,
-      orderId,
-      gst,
-      time,
-      orderTime,
-      userId,
-      orderAcceptTime,
-      deliverTime,
-    };
-
-    orders.push(Order);
-  }
-  response.send(orders);
-};
-
-const sendPushMessage = async (token: string, title: string, body: string) => {
+export const sendPushMessage = async (token: string,
+  title: string, body: string) => {
   const message = {
     notification: {
       title,
@@ -196,7 +147,88 @@ const moveOrderToPastOrderGlobal = async (orderId: string) => {
     });
 };
 
-const acceptOrder = async (
+export const moveOrderToCancelledOrders = async (orderId: string,
+  userId: string) => {
+  const db = admin.firestore();
+  const userOrderRef = db
+    .collection("users")
+    .doc(userId)
+    .collection("order")
+    .doc("myOrders")
+    .collection(orderId);
+
+  const targetCollection = db
+    .collection("users")
+    .doc(userId)
+    .collection("order")
+    .doc("cancelledOrders")
+    .collection(orderId);
+
+  userOrderRef
+    .get()
+    .then((qs: any) => {
+      qs.forEach((doc: any) => {
+        const data = doc.data();
+        targetCollection
+          .doc(doc.id)
+          .set(data)
+          .then(() => {
+            console.log("Document copied");
+            userOrderRef
+              .doc(doc.id)
+              .delete()
+              .then(() => {
+                console.log("Deleted");
+              });
+          })
+          .catch((er) => {
+            console.log("Cant copy", er);
+          });
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
+export const moveOrderToCancelledOrdersGlobal = async (orderId: string) => {
+  const db = admin.firestore();
+  const globalOrderRef = db
+    .collection("orders")
+    .doc("newOrders")
+    .collection(orderId);
+
+  const targetCollection = db
+    .collection("orders")
+    .doc("cancelledOrders")
+    .collection(orderId);
+  globalOrderRef
+    .get()
+    .then((qs) => {
+      qs.forEach((doc) => {
+        const data = doc.data();
+        targetCollection
+          .doc(doc.id)
+          .set(data)
+          .then(() => {
+            console.log("Document copied");
+            globalOrderRef
+              .doc(doc.id)
+              .delete()
+              .then(() => {
+                console.log("Deleted");
+              });
+          })
+          .catch((er) => {
+            console.log("Cant copy", er);
+          });
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
+
+export const acceptOrder = async (
   orderId: string,
   otp: string,
   deliveryTime: string,
@@ -244,7 +276,8 @@ const acceptOrder = async (
   return {message: "success"};
 };
 
-const confirmOrder = async (userId: string, orderId: string, otp: string) => {
+export const confirmOrder = async (userId: string,
+  orderId: string, otp: string) => {
   const db = admin.firestore();
   const userOrderRef = db
     .collection("users")
@@ -283,8 +316,8 @@ const confirmOrder = async (userId: string, orderId: string, otp: string) => {
       });
     }
 
-    moveOrderToPastOrderUser(orderId, userId);
-    moveOrderToPastOrderGlobal(orderId);
+    await moveOrderToPastOrderUser(orderId, userId);
+    await moveOrderToPastOrderGlobal(orderId);
 
     const fcmSnap = await db.collection("users").doc(userId).get();
     const fcmToken = fcmSnap.get("fcm");
@@ -325,7 +358,7 @@ export const updateOrder = async (req: Request, res: Response) => {
 };
 
 
-export const verifyAdmin = async (userEmail : string)=>{
+export const verifyAdmin = async (userEmail : string) : Promise<boolean>=>{
   const db = admin.firestore();
   const adminRef = db.collection("admin").doc("adminEmails");
   const res = (await adminRef.get()).data();
@@ -336,13 +369,7 @@ export const verifyAdmin = async (userEmail : string)=>{
   }
   return false;
 };
-export const deleteOrder = async (req : Request, res : Response) =>{
-  // const db = admin.firestore();
-  // const response =db.collection("orders").doc("newOrders");
-  const id = req.params;
-  console.log(id);
-  res.end();
-};
+
 
 export const streamData = async (req : Request, res :Response)=> {
   const db = admin.firestore();
